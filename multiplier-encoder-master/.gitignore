@@ -1,0 +1,8 @@
+data/
+# data*/
+
+.*
+!/.gitignore
+
+
+# find ./src -name '*.pyc' | xargs -n 1 git rm --cached
