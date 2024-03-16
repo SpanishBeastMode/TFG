@@ -1,6 +1,9 @@
-from generate_inputs import generate_inputs
-from initialize.initializer import Initializer
-from solve.solver import Solver
+from src.multipliers import *
+from src.solve import *
+from src.generate_inputs import *
+from src.initialize import *
+from src.generate_inputs import *
+from dwave.system.samplers import DWaveSampler
 
 
 def solve(inputs, *args, **kwargs):
@@ -8,7 +11,10 @@ def solve(inputs, *args, **kwargs):
 
     solver = Solver(inputs, initializer)
 
-    print(solver.params)
+    solution = solver.annealing_enhanced_by_pause(
+        params=solver.params, anneal_direction='forward', Tp=100, Sp_list=[38/100], Ta=10),
+
+    print(solution)
 
     return
 
@@ -19,16 +25,17 @@ def solve(inputs, *args, **kwargs):
     # solver.run_pRV_for_diff_Tps(pause_enhanced=True, Tp_list=[100], Sp_list=[(38-i)/100 for i in range(4)], Ta=10)
 
     # solver.gready_pRV(pause_enhanced=False, Tp_list=[100], Sp_list=[(38-i)/100 for i in range(4)], Ta=10)
-    solver.gready_pRV(pause_enhanced=False, filtered=True)
+    # solver.gready_pRV(pause_enhanced=False, filtered=True)
 
-    solver.run_BFS_based_iterative_reverse_annealing(pause_enhanced=False, Ta=20)
+    # solver.run_BFS_based_iterative_reverse_annealing(pause_enhanced=False, Ta=20)
 
 
 def run_in_batches(*args, counter=1, **kwargs):
     for out in generate_inputs(*args, counter=counter):
+        print("first number: ", out)
         # if length == 8 and width == 8:
         #     assert kwargs['using_improved_library']  # which found the ground state for the following inputs
-        #     out = 59989     
+        #     out = 59989
 
         inputs = {'out': out}
 
@@ -37,7 +44,7 @@ def run_in_batches(*args, counter=1, **kwargs):
 
 if __name__ == '__main__':
     vias = ['api', 'flux_biases', 'extra_chains', 'adhoc_encoding']
-
     size = 8
-    length, width = 16, size
-    run_in_batches(length, width, via=vias[1], using_improved_library=True, sys=4.1)
+    length, width = 12, size
+    run_in_batches(
+        length, width, via=vias[1], using_improved_library=True, sys=4.1)
