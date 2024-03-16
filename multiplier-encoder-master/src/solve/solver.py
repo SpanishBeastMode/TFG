@@ -143,7 +143,8 @@ class Solver():
 
     def _run(self, params=None, old_fp=None):
 
-        qpu = DWaveSampler(Solver=f'chip_id: Advantage_system{self.initialized_multiplier.pegasus_ver}', auto_scale=False)
+        qpu = DWaveSampler(Solver=f'chip_id: Advantage_system{
+                           self.initialized_multiplier.pegasus_ver}', auto_scale=False)
         sampleset = qpu.sample(self.bqm, **params)
 
         # pickle is not compatible with Sampleset class anymore -> Sampleset().to_serializable()
@@ -154,30 +155,21 @@ class Solver():
         return statistics
 
     def forward_annealing(self, Ta, anneal_dir=None, use_old_data=None):
-        if not os.path.exists(anneal_dir):
-            os.makedirs(anneal_dir)
+        
 
-        sche = f'(Ta={Ta}us)'
-        fp = os.path.join(anneal_dir, f'factoring_{self.inputs["out"]}_via_{sche}')
 
         old_fp = None
         if use_old_data:
             out = self.inputs['out']
-            filename = f'FW{Ta}us_factoring_{out}_with_{self.initialized_multiplier.length}*{
-                self.initialized_multiplier.width}bit_of_CFA_{self.initialized_multiplier.cfa_index}_symmetric_None'
-            old_fp, statistic_fp = [os.path.join(
-                anneal_dir, f'{prefix}{filename}') for prefix in ['sampleset_', '']]
-            statistic_fp = statistic_fp + '.txt'
-            if os.path.exists(statistic_fp):
-                os.remove(statistic_fp)
 
         params = copy.deepcopy(self.params)
         params['annealing_time'] = Ta
 
-        print(f'Ta={Ta}us: \n\tfp = {fp}, \n\tparams["annealing_time"] = {params["annealing_time"]}')
-        return self._run(fp, params, old_fp=old_fp)
+        print(f'Ta={Ta}us:, \n\tparams["annealing_time"] = {
+              params["annealing_time"]}')
+        return self._run(params, old_fp=old_fp)
 
-    def annealing_enhanced_by_pause(self, params, Tp=1, Sp_list=None, Ta=10, anneal_direction=None, anneal_dir=None, use_old_data=None, rounds=None):
+    def annealing_enhanced_by_pause(self, params, Tp=1, Sp_list=None, Ta=10, anneal_direction=None):
 
         if not Sp_list:
             if anneal_direction == 'forward':
@@ -192,7 +184,7 @@ class Solver():
         schedule_from = [0, 0] if anneal_direction == 'forward' else [0, 1]
         rs = {}
         for Sp in Sp_list:
-            sche = f'(Ta={Ta}us, Tp={Tp}us, Sp={Sp})'
+            # sche = f'(Ta={Ta}us, Tp={Tp}us, Sp={Sp})'
             # params = copy.deepcopy(self.params)
             params['anneal_schedule'] = [
                 schedule_from, *self.schedule_ptn(Sp, Tp, Ta)]
@@ -203,12 +195,11 @@ class Solver():
         return rs
 
     def run_FW_for_diff_Tas(self, Ta_list=[10, 30, 50, 100], **kwargs):
-        anneal_dir = os.path.join(self.data_path, 'forward_annealing')
 
         results = {}
         for Ta in Ta_list:
             results[Ta] = self.forward_annealing(
-                Ta, anneal_dir=anneal_dir, **kwargs)
+                Ta, **kwargs)
 
         # self.plot_forward_annealing_results(results, anneal_dir)
         return results
@@ -216,13 +207,10 @@ class Solver():
     def run_pFW_for_diff_Tps(self, Tp_list=[1, 10, 30, 50, 100], Sp_list=None, anneal_direction='forward', Ta=10):
         params = copy.deepcopy(self.params)
 
-        anneal_dir = os.path.join(self.data_path, f'{
-                                  anneal_direction}_annealing_enhanced_by_pause', f'with_Ta={Ta}us')
-
         results = {}
         for Tp in Tp_list:
             results[Tp] = self.annealing_enhanced_by_pause(params, Tp=Tp, Sp_list=Sp_list,
-                                                           Ta=Ta, anneal_direction=anneal_direction, anneal_dir=anneal_dir)
+                                                           Ta=Ta, anneal_direction=anneal_direction)
 
         # self.plot_pause_enhanced_forward_annealing_results(results, anneal_dir, Ta)
         return results
@@ -333,17 +321,15 @@ class Solver():
         return to_global_minima
 
     def _choose_initial_state_for_pRV(self, pause_enhanced=False, Tp_list=None, Sp_list=None, Ta_list=[10], **kwargs):
+        print("Choosing initial state for pRV")
         if pause_enhanced:
             to_minima = self._get_global_minima_from_pause_enhanced_FW(
                 Tp_list, Sp_list, Ta_list=Ta_list)
             (ta, tp, sp), minima = to_minima
-            to_dir = f'from_pFW_(Ta={ta}us, Tp={tp}us, Sp={
-                sp}, minima={round(minima.energy, 3)})'
         else:
             to_minima = self._get_global_minima_from_pure_FW(Ta_list, **kwargs)
             ta, minima = to_minima
-            to_dir = f'from_FW_(Ta={ta}us, minima={round(minima.energy, 3)})'
-        return to_minima, to_dir
+        return to_minima
 
     def run_pRV_for_diff_Tps(self, pause_enhanced=False,
                              Tp_list=[1, 10, 30, 50, 100], Sp_list=None,
@@ -414,10 +400,9 @@ class Solver():
 
     def run_BFS_based_iterative_reverse_annealing(self, pause_enhanced=False,
                                                   Tp_list=[1, 10, 30, 50, 100], Sp_list=[(30+i)/100 for i in range(10)],
-                                                  Ta=20, anneal_direction='reverse',
-                                                  use_old_data=True):
-        anneal_dir = os.path.join(
-            self.data_path, 'BFS_based_iterated_reverse_annealing')
+                                                  Ta=20, anneal_direction='reverse',):
+
+        print("Runnning BFS based iterative reverse annealing")
 
         l, w = self.initialized_multiplier.length, self.initialized_multiplier.width
         hard_energies = {1: 8, 2: 6, 3: 2, 4: 0} if l == 16 else {
@@ -427,8 +412,17 @@ class Solver():
             # tunable for each iteration
             1, 10, 2)] + [20, 100] if l == 14 else copy.deepcopy(Tp_list)
 
-        from_minima, to_relative_dir = self._choose_initial_state_for_pRV(
-            pause_enhanced, Tp_list, Sp_list, [Ta], use_old_data=use_old_data)
+        print("Defined tp and sp")
+
+        from_minima = self._choose_initial_state_for_pRV(
+            pause_enhanced, Tp_list, Sp_list, [Ta])
+        
+        print("Chose initial state for pRV")
+
+        print(from_minima)
+
+        return
+
         ta, minima = from_minima
         fe = round(minima.energy, 3)
         initial_state = (fe, minima.sample, None)
@@ -436,22 +430,11 @@ class Solver():
 
         iterative_results_for_initial_states = defaultdict(dict)
         rounds = 1
-        iterative_dir = os.path.join(
-            anneal_dir, f'IRV{rounds}_' + to_relative_dir)
-        kwargs = {
-            'Sp_list': Sp_list,
-            'Ta': Ta,
-            'anneal_direction': anneal_direction,
-            'use_old_data': use_old_data
-        }
+        kwargs = {}
         MINIMAs = {0: ((ta, None, None), minima)}
         while tp_list:
             tp = tp_list.pop(0)
             kwargs['rounds'] = rounds
-
-            colors = plt.colormaps['viridis'](
-                np.linspace(0, 1, len(initial_state_list)))
-            colors = colors[::-1]
 
             iterative_results_per_tp = {}
             for initial_state in initial_state_list[::-1]:
@@ -460,12 +443,6 @@ class Solver():
                 if rounds > 1:
                     to_relative_dir = f'from_a_low_energy_state-(e={fe}, median_moves={
                         moves})'
-
-                to_abs_dir = os.path.join(
-                    iterative_dir, '' if rounds == 1 else to_relative_dir)
-
-                kwargs['anneal_dir'] = os.path.join(
-                    to_abs_dir, f'with_Ta={Ta}us')
 
                 Sp_results = self._iterative_pRV(minima, tp, **kwargs)
                 to_optima = self._get_minTp_to_reach_minima({tp: Sp_results})
@@ -489,10 +466,6 @@ class Solver():
                     MINIMAs[rounds] = ((Ta, tp, sp), optima)
 
                     rounds += 1
-                    iterative_dir = os.path.join(to_abs_dir, f'IRV{rounds}_from_the_IRV{
-                                                 rounds-1}(Tp={tp}us, Sp={sp})')
-                    sp_fp = os.path.join(kwargs['anneal_dir'], f'pause_of_Tp={tp}us', f'factoring_{
-                                         self.inputs["out"]}_via_(Ta={Ta}us, Tp={tp}us, Sp={sp})')
                     initial_state_list = self._choose_a_lower_energy_space_for_initial_states(
                         rounds, initial_state, sp_fp, hard_energies=hard_energies)
                     if rounds == 4:
@@ -507,7 +480,6 @@ class Solver():
                     else:
                         tp_list = copy.deepcopy(Tp_list)
 
-                    iterative_results_for_initial_states = defaultdict(dict)
                     break
 
     def _recursive_pRV(self, rounds, from_minima, recursive_dir, Tp_list=None, Ta=None, moves_list=None,
