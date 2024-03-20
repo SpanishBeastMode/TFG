@@ -14,9 +14,9 @@ def solve(inputs, *args, **kwargs):
     # solution = solver.annealing_enhanced_by_pause(
         # params=solver.params, anneal_direction='forward', Tp=100, Sp_list=[38/100], Ta=10),
     
-    solution = solver.run_BFS_based_iterative_reverse_annealing(pause_enhanced=False, Ta=10, Tp_list=[1], Sp_list=[0.4])
+    solution = solver.run_BFS_based_iterative_reverse_annealing(pause_enhanced=False, Ta=10)
 
-    print(solution)
+    print("solution", solution)
 
     return
 

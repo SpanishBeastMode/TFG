@@ -8,10 +8,6 @@ def solve(inputs, *args, **kwargs):
 
     solver = Solver(inputs, initializer)
 
-    print(solver.params)
-
-    return
-
     # solver.run_FW_for_diff_Tas(Ta_list=[10, 20])
 
     # solver.run_pFW_for_diff_Tps(Tp_list=[100], Sp_list=[(38-i)/100 for i in range(4)], Ta=10)
@@ -19,7 +15,7 @@ def solve(inputs, *args, **kwargs):
     # solver.run_pRV_for_diff_Tps(pause_enhanced=True, Tp_list=[100], Sp_list=[(38-i)/100 for i in range(4)], Ta=10)
 
     # solver.gready_pRV(pause_enhanced=False, Tp_list=[100], Sp_list=[(38-i)/100 for i in range(4)], Ta=10)
-    solver.gready_pRV(pause_enhanced=False, filtered=True)
+    # solver.gready_pRV(pause_enhanced=False, filtered=True)
 
     solver.run_BFS_based_iterative_reverse_annealing(pause_enhanced=False, Ta=20)
 

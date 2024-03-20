@@ -141,33 +141,32 @@ class Solver():
 
         return sampleset
 
-    def _run(self, params=None, old_fp=None):
-
-        qpu = DWaveSampler(Solver=f'chip_id: Advantage_system{
-                           self.initialized_multiplier.pegasus_ver}', auto_scale=False)
+    def _run(self, params=None):
+        
+        qpu = DWaveSampler(Solver=f'chip_id: Advantage_system{self.initialized_multiplier.pegasus_ver}', auto_scale=False)
         sampleset = qpu.sample(self.bqm, **params)
 
-        # pickle is not compatible with Sampleset class anymore -> Sampleset().to_serializable()
-        # with open(fp, 'wb') as file:
-        #     pickle.dump(sampleset, file)
+        fp = ('running' + f'with_Ta={params["annealing_time"]}us')
 
-        statistics = self.parse_sampleset(sampleset)
-        return statistics
+        if not os.path.exists(fp):
+            with open(fp, 'wb') as file:
+                pickle.dump(sampleset, file)
+        else:
+            with open(fp, 'ab') as file:
+                pickle.dump(sampleset, file)
+
+        sampleset = pickle.load(open(fp, 'rb'))
+
+        return self._extra_representative_samples(sampleset)
 
     def forward_annealing(self, Ta, anneal_dir=None, use_old_data=None):
-        
-
-
-        old_fp = None
-        if use_old_data:
-            out = self.inputs['out']
 
         params = copy.deepcopy(self.params)
         params['annealing_time'] = Ta
 
         print(f'Ta={Ta}us:, \n\tparams["annealing_time"] = {
               params["annealing_time"]}')
-        return self._run(params, old_fp=old_fp)
+        return self._run(params)
 
     def annealing_enhanced_by_pause(self, params, Tp=1, Sp_list=None, Ta=10, anneal_direction=None):
 
@@ -322,13 +321,11 @@ class Solver():
 
     def _choose_initial_state_for_pRV(self, pause_enhanced=False, Tp_list=None, Sp_list=None, Ta_list=[10], **kwargs):
         print("Choosing initial state for pRV")
+        
         if pause_enhanced:
-            to_minima = self._get_global_minima_from_pause_enhanced_FW(
-                Tp_list, Sp_list, Ta_list=Ta_list)
-            (ta, tp, sp), minima = to_minima
+            to_minima = self._get_global_minima_from_pause_enhanced_FW(Tp_list, Sp_list, Ta_list=Ta_list)
         else:
             to_minima = self._get_global_minima_from_pure_FW(Ta_list, **kwargs)
-            ta, minima = to_minima
         return to_minima
 
     def run_pRV_for_diff_Tps(self, pause_enhanced=False,
@@ -419,11 +416,8 @@ class Solver():
         
         print("Chose initial state for pRV")
 
-        print(from_minima)
-
-        return
-
         ta, minima = from_minima
+        print(minima)
         fe = round(minima.energy, 3)
         initial_state = (fe, minima.sample, None)
         initial_state_list = [initial_state]
@@ -433,8 +427,11 @@ class Solver():
         kwargs = {}
         MINIMAs = {0: ((ta, None, None), minima)}
         while tp_list:
+            print(tp_list)
             tp = tp_list.pop(0)
             kwargs['rounds'] = rounds
+
+            exit(0)
 
             iterative_results_per_tp = {}
             for initial_state in initial_state_list[::-1]:
