@@ -8,7 +8,7 @@ import shutil
 import numpy as np
 from matplotlib import pyplot as plt
 
-from dimod import BinaryQuadraticModel, SampleSet
+from dimod import BinaryQuadraticModel, SampleSet, ExactSolver
 from dwave.system import DWaveSampler
 
 import os
@@ -142,24 +142,27 @@ class Solver():
         return sampleset
 
     def _run(self, params=None):
-        
+        from dwave.samplers import SimulatedAnnealingSampler
         qpu = DWaveSampler(Solver=f'chip_id: Advantage_system{self.initialized_multiplier.pegasus_ver}', auto_scale=False)
+
+        # qpu = SimulatedAnnealingSampler()
+
+        # qpu = ExactSolver()
+
         sampleset = qpu.sample(self.bqm, **params)
 
-        fp = ('running' + f'with_Ta={params["annealing_time"]}us')
+        fp = ('running.json')
 
-        if not os.path.exists(fp):
-            with open(fp, 'wb') as file:
-                pickle.dump(sampleset, file)
-        else:
-            with open(fp, 'ab') as file:
-                pickle.dump(sampleset, file)
+        # if not os.path.exists(fp):
+        #     with open(fp, 'w') as file:
+        #         file.write(json.dumps(sampleset.to_serializable()))
+        # else:
+        #     with open(fp, 'a') as file:
+        #         file.write(json.dumps(sampleset.to_serializable()))
 
-        sampleset = pickle.load(open(fp, 'rb'))
+        return self._extra_representative_samples(sampleset), self.parse_sampleset(sampleset)
 
-        return self._extra_representative_samples(sampleset)
-
-    def forward_annealing(self, Ta, anneal_dir=None, use_old_data=None):
+    def forward_annealing(self, Ta):
 
         params = copy.deepcopy(self.params)
         params['annealing_time'] = Ta
@@ -321,9 +324,10 @@ class Solver():
 
     def _choose_initial_state_for_pRV(self, pause_enhanced=False, Tp_list=None, Sp_list=None, Ta_list=[10], **kwargs):
         print("Choosing initial state for pRV")
-        
+
         if pause_enhanced:
-            to_minima = self._get_global_minima_from_pause_enhanced_FW(Tp_list, Sp_list, Ta_list=Ta_list)
+            to_minima = self._get_global_minima_from_pause_enhanced_FW(
+                Tp_list, Sp_list, Ta_list=Ta_list)
         else:
             to_minima = self._get_global_minima_from_pure_FW(Ta_list, **kwargs)
         return to_minima
@@ -413,7 +417,7 @@ class Solver():
 
         from_minima = self._choose_initial_state_for_pRV(
             pause_enhanced, Tp_list, Sp_list, [Ta])
-        
+
         print("Chose initial state for pRV")
 
         ta, minima = from_minima
@@ -430,8 +434,6 @@ class Solver():
             print(tp_list)
             tp = tp_list.pop(0)
             kwargs['rounds'] = rounds
-
-            exit(0)
 
             iterative_results_per_tp = {}
             for initial_state in initial_state_list[::-1]:
