@@ -16,18 +16,24 @@ def solve(inputs, *args, **kwargs):
 
     # solutions = solver.forward_annealing(Ta=Ta)
 
-    # solutions = solver.run_FW_for_diff_Tas(Ta_list=Ta)
+    # ers, solutions = solver.annealing_enhanced_by_pause(params=solver.params, Ta=Ta, anneal_direction='forward') # forward annealing with pause, 10x8 bits, 256271
 
-    solutions = solver.annealing_enhanced_by_pause(params=solver.params, Ta=Ta, anneal_direction='forward')
+    # results, solutions = solver.run_pRV_for_diff_Tps(pause_enhanced=True, Tp_list=[100], Sp_list=[(38-i)/100 for i in range(5)], Ta=10) # 11x8 bits, 511789
+
+    results, solutions = solver.gready_pRV(pause_enhanced=False, Tp_list=[100], Sp_list=[(38-i)/100 for i in range(4)], Ta=10)
+
+    # results, solutions = solver.gready_pRV(pause_enhanced=False, filtered=False)
 
     # solution = solver.run_BFS_based_iterative_reverse_annealing(pause_enhanced=False, Ta=10)
 
+
+
     # For run fw for different tas
     for key, solution in solutions.items():
-        for solv in solution[1]:
-            for sol in solv:
+        for solv, solu in solution.items():
+            for sol in solu[0]:
                 if sol[0]*sol[1] == sol[2]:
-                   print("Solution found: ", sol)
+                    print("Solution found: ", sol)
 
     # For only forward annealing
     # i=0
@@ -61,6 +67,6 @@ def run_in_batches(*args, counter=1, **kwargs):
 if __name__ == '__main__':
     vias = ['api', 'flux_biases', 'extra_chains', 'adhoc_encoding']
     size = 8
-    length, width = 10, size
+    length, width = 8, size
     run_in_batches(
         length, width, via=vias[1], using_improved_library=True, sys=4.1)
